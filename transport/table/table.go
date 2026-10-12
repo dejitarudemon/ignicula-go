@@ -1,7 +1,7 @@
 package table
 
 import (
-	"github.com/dejitarudemon/ignicula-go/internal/transport/table/versions"
+	"github.com/dejitarudemon/ignicula-go/transport/table/versions"
 	"github.com/dejitarudemon/ignicula-wire/v0/fields"
 )
 
