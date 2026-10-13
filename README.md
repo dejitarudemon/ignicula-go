@@ -60,30 +60,16 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	if err := ignicula.WaitReady(ctx); err != nil {
-		log.Fatal("activate:", err)
+		log.Fatal(err)
 	}
 
-	if err := ignicula.Write(ctx, []byte("greeting"), values.StringValue("hello")); err != nil {
-		log.Fatal(err)
-	}
-	val, err := ignicula.Read(ctx, []byte("greeting"))
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("%T = %v\n", val, val)
+	_ = ignicula.Write(ctx, []byte("greeting"), values.StringValue("hello"))
+	val, _ := ignicula.Read(ctx, []byte("greeting"))
+	fmt.Println(val)
 }
 ```
 
-`Dial` runs Hello and v1 activation in the background. Call `WaitReady` before other ops.
-
-### Packages
-
-| Package | Role |
-| --- | --- |
-| [`client`](https://pkg.go.dev/github.com/dejitarudemon/ignicula-go/client) | Public API: `Dial`, CRUD, `Done` / `Err` |
-| [`configs`](https://pkg.go.dev/github.com/dejitarudemon/ignicula-go/configs) | Timeouts, auth, runner limits |
-| [`values`](https://pkg.go.dev/github.com/dejitarudemon/ignicula-go/values) | Typed values and array builders |
-| [`logger`](https://pkg.go.dev/github.com/dejitarudemon/ignicula-go/logger) | Optional logging interface |
+`Dial` activates in the background — call `WaitReady` before other ops.
 
 ### CLI
 
@@ -92,10 +78,6 @@ go run ./cmd -addr 127.0.0.1:16000 -login user -hash <64 hex chars>
 ```
 
 See [CLI](docs/cli.en.md) for commands.
-
-### License
-
-[MIT](LICENSE)
 
 ---
 
@@ -120,16 +102,7 @@ go get github.com/dejitarudemon/ignicula-go@latest
 
 ### Быстрый старт
 
-Тот же пример, что в [English](#quick-start): `Dial` → `WaitReady` → `Write` / `Read`. Активация идёт в фоне; до `WaitReady` операции ещё нельзя считать готовыми.
-
-### Пакеты
-
-| Пакет | Назначение |
-| --- | --- |
-| [`client`](https://pkg.go.dev/github.com/dejitarudemon/ignicula-go/client) | Публичный API: `Dial`, CRUD, `Done` / `Err` |
-| [`configs`](https://pkg.go.dev/github.com/dejitarudemon/ignicula-go/configs) | Таймауты, auth, лимиты runner |
-| [`values`](https://pkg.go.dev/github.com/dejitarudemon/ignicula-go/values) | Типизированные значения и массивы |
-| [`logger`](https://pkg.go.dev/github.com/dejitarudemon/ignicula-go/logger) | Опциональный логгер |
+Тот же пример, что в [English](#quick-start): `Dial` → `WaitReady` → `Write` / `Read`.
 
 ### CLI
 
@@ -138,7 +111,3 @@ go run ./cmd -addr 127.0.0.1:16000 -login user -hash <64 hex символа>
 ```
 
 Команды — в [CLI](docs/cli.md).
-
-### Лицензия
-
-[MIT](LICENSE)

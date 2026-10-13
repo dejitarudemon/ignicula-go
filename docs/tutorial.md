@@ -2,174 +2,83 @@ Language: [Русский](tutorial.md) · [English](tutorial.en.md)
 
 # Туториалы
 
-Пошаговая работа с типом [`client.Ignicula`](https://pkg.go.dev/github.com/dejitarudemon/ignicula-go/client#Ignicula) против живого сервера.
-
-Подставьте свои `addr`, `Login` и `Hash`.
+Работа с [`client.Ignicula`](https://pkg.go.dev/github.com/dejitarudemon/ignicula-go/client#Ignicula). Подставьте свои `addr`, `Login` и `Hash`.
 
 ## 1. Dial и WaitReady
 
-`Dial` возвращает `*Ignicula` и в фоне запускает Hello + Handshake. До готовности вызовите `WaitReady` — он блокируется, пока активация не завершится (или пока не сработают `ctx` / обрыв).
-
 ```go
-package main
+cfg := configs.DefaultConnectionConfig()
+cfg.Auth = configs.AuthConfig{Login: "user", Hash: [32]byte{ /* … */ }}
 
-import (
-	"context"
-	"log"
-	"time"
+ignicula, err := client.Dial("127.0.0.1:16000", cfg, nil)
+if err != nil {
+	log.Fatal(err)
+}
+defer ignicula.Close()
 
-	"github.com/dejitarudemon/ignicula-go/client"
-	"github.com/dejitarudemon/ignicula-go/configs"
-)
-
-func main() {
-	cfg := configs.DefaultConnectionConfig()
-	cfg.Auth = configs.AuthConfig{
-		Login: "user",
-		Hash:  [32]byte{ /* 32 байта */ },
-	}
-
-	ignicula, err := client.Dial("127.0.0.1:16000", cfg, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer ignicula.Close()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-	if err := ignicula.WaitReady(ctx); err != nil {
-		log.Fatal("activate:", err)
-	}
-
-	// дальше: Ping / Read / Write / Delete на этом же ignicula
+ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+defer cancel()
+if err := ignicula.WaitReady(ctx); err != nil {
+	log.Fatal(err)
 }
 ```
 
-`nil` вместо логгера — текстовый логгер в stderr на уровне info.
+`Dial` запускает Hello + Handshake в фоне. `WaitReady` ждёт готовности (или `ctx` / обрыв).
 
 ## 2. Ping
 
 ```go
-ctx := context.Background()
 if err := ignicula.Ping(ctx); err != nil {
 	log.Fatal(err)
 }
 ```
 
-## 3. Запись и чтение скаляров
-
-`Ignicula.Write` принимает любой `values.Value`.
+## 3. Write / Read
 
 ```go
-import "github.com/dejitarudemon/ignicula-go/values"
+_ = ignicula.Write(ctx, []byte("name"), values.StringValue("alice"))
+_ = ignicula.Write(ctx, []byte("n"), values.Int64Value(-42))
+_ = ignicula.Write(ctx, []byte("j"), values.JSONValue(`{"ok":true}`))
 
-ctx := context.Background()
-key := []byte("user:1:name")
-
-if err := ignicula.Write(ctx, key, values.StringValue("alice")); err != nil {
-	log.Fatal(err)
-}
-
-val, err := ignicula.Read(ctx, key)
+val, err := ignicula.Read(ctx, []byte("name"))
 if err != nil {
 	log.Fatal(err)
 }
-switch v := val.(type) {
-case values.StringValue:
-	log.Printf("name=%q", string(v))
-default:
-	log.Printf("got %T", val)
-}
-```
-
-Числа и JSON (через конструкторы или `values.New`):
-
-```go
-_ = ignicula.Write(ctx, []byte("n"), values.Int64Value(-42))
-_ = ignicula.Write(ctx, []byte("u"), values.Uint64Value(42))
-_ = ignicula.Write(ctx, []byte("f"), values.Float64Value(3.14))
-j, _ := values.New(values.JSON, []byte(`{"ok":true}`))
-_ = ignicula.Write(ctx, []byte("j"), j)
+fmt.Println(val)
 ```
 
 ## 4. Массивы
 
-Тот же `Write` — передайте typed/untyped array:
-
 ```go
-typed, err := values.NewTypedArray(
-	values.String,
-	values.StringValue("a"),
-	values.StringValue("b"),
-)
-if err != nil {
-	log.Fatal(err)
-}
-if err := ignicula.Write(ctx, []byte("tags"), typed); err != nil {
-	log.Fatal(err)
-}
+tags, _ := values.NewTypedArray(values.String, values.StringValue("a"), values.StringValue("b"))
+_ = ignicula.Write(ctx, []byte("tags"), tags)
 
-mixed, err := values.NewUntypedArray(
-	values.StringValue("hello"),
-	values.Int64Value(-7),
-)
-if err != nil {
-	log.Fatal(err)
-}
-if err := ignicula.Write(ctx, []byte("mix"), mixed); err != nil {
-	log.Fatal(err)
-}
-
-val, err := ignicula.Read(ctx, []byte("tags"))
-if err != nil {
-	log.Fatal(err)
-}
-if arr, ok := val.(values.TypedArrayValue); ok {
-	log.Printf("elemType=%s len=%d", arr.ElemType, len(arr.Elems))
-}
+mix, _ := values.NewUntypedArray(values.StringValue("hello"), values.Int64Value(-7))
+_ = ignicula.Write(ctx, []byte("mix"), mix)
 ```
 
 ## 5. Delete
 
 ```go
-if err := ignicula.Delete(ctx, []byte("user:1:name")); err != nil {
-	log.Fatal(err)
-}
+_ = ignicula.Delete(ctx, []byte("name"))
 ```
 
 ## 6. Done и Err (по желанию)
 
-Следить за `Done` не обязательно: после обрыва или `Close` обычные вызовы (`Ping` / `Read` / `Write` / `Delete`) сами вернут ошибку.
-
-`Done` / `Err` нужны, если хотите узнать о конце соединения без следующего запроса — например, выйти из цикла или начать reconnect в фоне:
+Операции после обрыва и так вернут ошибку. `Done` — если нужно узнать о конце соединения без следующего запроса:
 
 ```go
 go func() {
 	<-ignicula.Done()
-	log.Println("connection ended:", ignicula.Err())
+	log.Println(ignicula.Err())
 }()
 ```
 
-После закрытия `Done` причина в `Err()`: обычно `ErrDisconnected` (сервер/транспорт) или `ErrClosed` (штатный `Close`).
-
-## 7. Свой конфиг и логгер
+## 7. Конфиг и логгер
 
 ```go
-import (
-	"log/slog"
-	"time"
-
-	"github.com/dejitarudemon/ignicula-go/logger/implemented"
-)
-
-cfg := configs.DefaultConnectionConfig()
 cfg.ConnectTimeout = 5 * time.Second
-cfg.RuntimeV1.ReadTimeout = 10 * time.Second
 cfg.RuntimeV1.MaxAttempts = 5
-cfg.Auth = configs.AuthConfig{Login: "user", Hash: hash}
 
-log := implemented.NewText(slog.LevelDebug)
-ignicula, err := client.Dial(addr, cfg, log)
+ignicula, err := client.Dial(addr, cfg, implemented.NewText(slog.LevelDebug))
 ```
-
-Подойдёт любая реализация `logger.Logger`, либо `nil` для дефолта.
