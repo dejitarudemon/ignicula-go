@@ -137,9 +137,9 @@ if err := ignicula.Delete(ctx, []byte("user:1:name")); err != nil {
 }
 ```
 
-## 6. Watch for disconnect
+## 6. Done and Err
 
-`Ignicula` exposes `Done` / `Err` for connection liveness:
+When the connection ends (locally or from the server), `Done` closes and `Err` explains why:
 
 ```go
 go func() {
