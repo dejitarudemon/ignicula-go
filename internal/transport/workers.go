@@ -47,8 +47,7 @@ func (c *Connection) reader(ctx context.Context) error {
 		switch version {
 		case fields.Version(1):
 			if err := c.runner_v1.Consume(ctx, reader); err != nil {
-				var ignore runners.LogAndIgnore
-				if errors.As(err, &ignore) {
+				if _, ok := errors.AsType[runners.LogAndIgnore](err); ok {
 					c.warn("ignored frame", "error", err)
 					continue
 				}
