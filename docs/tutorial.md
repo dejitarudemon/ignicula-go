@@ -137,28 +137,20 @@ if err := ignicula.Delete(ctx, []byte("user:1:name")); err != nil {
 }
 ```
 
-## 6. Done и Err
+## 6. Done и Err (по желанию)
 
-Когда соединение закрывается (локально или сервером), закрывается `Done`, а `Err` объясняет причину:
+Следить за `Done` не обязательно: после обрыва или `Close` обычные вызовы (`Ping` / `Read` / `Write` / `Delete`) сами вернут ошибку.
+
+`Done` / `Err` нужны, если хотите узнать о конце соединения без следующего запроса — например, выйти из цикла или начать reconnect в фоне:
 
 ```go
 go func() {
 	<-ignicula.Done()
 	log.Println("connection ended:", ignicula.Err())
 }()
-
-// ... работа с ignicula ...
-
-select {
-case <-ignicula.Done():
-	if err := ignicula.Err(); err != nil {
-		log.Println("disconnected:", err)
-	}
-default:
-}
 ```
 
-После `Done` дальнейшие вызовы `Ping` / `Read` / `Write` / `Delete` возвращают ту же ошибку, что `Err()` (обычно с `ErrDisconnected`, либо `ErrClosed` после штатного `Close`).
+После закрытия `Done` причина в `Err()`: обычно `ErrDisconnected` (сервер/транспорт) или `ErrClosed` (штатный `Close`).
 
 ## 7. Свой конфиг и логгер
 
