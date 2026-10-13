@@ -39,8 +39,15 @@ func Dial(addr string, cfg configs.ConnectionConfig, log logger.Logger) (*Ignicu
 		log = implemented.NewText(slog.LevelInfo)
 	}
 
+	ctxConnect, cancelConnect := context.WithTimeout(context.Background(), cfg.ConnectTimeout)
+	defer cancelConnect()
+
 	conn, err := transport.NewConnection(addr, cfg, log)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := ctxConnect.Err(); err != nil {
 		return nil, err
 	}
 
@@ -60,10 +67,8 @@ func Dial(addr string, cfg configs.ConnectionConfig, log logger.Logger) (*Ignicu
 	if timeout <= 0 {
 		timeout = configs.DefaultConnectionConfig().ConnectTimeout
 	}
-	readyCtx, readyCancel := context.WithTimeout(context.Background(), timeout)
-	defer readyCancel()
 
-	if err := conn.WaitReady(readyCtx); err != nil {
+	if err := conn.WaitReady(ctxConnect); err != nil {
 		_ = i.Close()
 		if startErr, _ := i.err.Load().(error); startErr != nil {
 			return nil, startErr
