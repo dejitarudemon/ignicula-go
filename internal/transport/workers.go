@@ -35,7 +35,7 @@ func (c *Connection) reader(ctx context.Context) error {
 		default:
 		}
 
-		if err := c.inner.SetDeadline(deadline(c.timeouts.Read)); err != nil {
+		if err := c.inner.SetReadDeadline(deadline(c.timeouts.Read)); err != nil {
 			if c.shuttingDown() {
 				return nil
 			}
@@ -101,7 +101,7 @@ func (c *Connection) writer(ctx context.Context) {
 			}
 		}
 
-		if err := c.inner.SetDeadline(deadline(c.timeouts.Write)); err != nil {
+		if err := c.inner.SetWriteDeadline(deadline(c.timeouts.Write)); err != nil {
 			if !c.shuttingDown() {
 				c.error("failed to set write deadline", "error", err)
 				c.abort(fmt.Errorf("%w: %v", ErrDisconnected, err))
