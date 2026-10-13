@@ -3,6 +3,8 @@ package runners
 import (
 	"errors"
 	"fmt"
+
+	protocolerr "github.com/dejitarudemon/ignicula-wire/v1/err"
 )
 
 var (
@@ -18,6 +20,10 @@ var (
 	ErrPingExhausted = errors.New("ping exhausted attempts")
 	// ErrReadExhausted is returned when Read used up all retry attempts.
 	ErrReadExhausted = errors.New("read exhausted attempts")
+	// ErrWriteExhausted is returned when Write used up all retry attempts.
+	ErrWriteExhausted = errors.New("write exhausted attempts")
+	// ErrDeleteExhausted is returned when Delete used up all retry attempts.
+	ErrDeleteExhausted = errors.New("delete exhausted attempts")
 	// ErrFailedCastBatchAnswer is returned when an Answer cannot be cast to BatchAnswer.
 	ErrFailedCastBatchAnswer = errors.New("failed to cast Answer to BatchAnswer")
 	// ErrRunnerClosed is returned when the runner has been closed.
@@ -80,7 +86,14 @@ func NewServerError(err error) ServerError {
 }
 
 // Error returns a human-readable summary of the error.
+// Protocol errors are formatted by code name and hex traceback ID instead of
+// raw byte dumps from the wire error's Error method.
 func (e ServerError) Error() string {
+	var pe protocolerr.ProtocolError
+	if errors.As(e.err, &pe) {
+		id := pe.TracebackID()
+		return fmt.Sprintf("server error: %s (traceback %x)", pe.Code(), id[:])
+	}
 	return fmt.Sprintf("server error: %v", e.err)
 }
 
