@@ -2,7 +2,7 @@ Language: [Русский](tutorial.md) · [English](tutorial.en.md)
 
 # Туториалы
 
-Пошаговая работа клиента с живым сервером Ignicula. Архитектура — в [how-it-works](how-it-works.md). Интерактивная оболочка: [CLI](cli.md).
+Пошаговая работа клиента с живым сервером Ignicula. Интерактивная оболочка: [CLI](cli.md).
 
 Подставьте свои `addr`, `Login` и `Hash`.
 

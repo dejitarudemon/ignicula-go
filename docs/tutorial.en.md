@@ -2,7 +2,7 @@ Language: [Русский](tutorial.md) · [English](tutorial.en.md)
 
 # Tutorials
 
-Step-by-step client usage against a running Ignicula server. Architecture notes are in [how-it-works](how-it-works.en.md). Interactive shell: [CLI](cli.en.md).
+Step-by-step client usage against a running Ignicula server. Interactive shell: [CLI](cli.en.md).
 
 Replace `addr`, `Login`, and `Hash` with values your server expects.
 

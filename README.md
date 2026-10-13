@@ -17,7 +17,6 @@ Wire framing lives in [`ignicula-wire`](https://github.com/dejitarudemon/ignicul
 
 ### Docs
 
-- [How it works](docs/how-it-works.en.md)
 - [Tutorials](docs/tutorial.en.md)
 - [CLI](docs/cli.en.md)
 
@@ -117,7 +116,6 @@ Go-клиент сервера [Ignicula](https://github.com/dejitarudemon): dia
 
 ### Документация
 
-- [Как это работает](docs/how-it-works.md)
 - [Туториалы](docs/tutorial.md)
 - [CLI](docs/cli.md)
 
