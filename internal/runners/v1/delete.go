@@ -3,6 +3,7 @@ package runner_v1
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/dejitarudemon/ignicula-go/internal/runners"
 	table_v1 "github.com/dejitarudemon/ignicula-go/internal/table/v1"
@@ -38,9 +39,9 @@ func (r *Runner) Delete(ctx context.Context, key []byte) error {
 // retry is true when the server reported a transient error and another
 // attempt is still allowed.
 func (r *Runner) deleteOnce(parent context.Context, attempt int, key []byte) (retry bool, err error) {
-	timeout := calculateTimeout(r.timeouts.Delete, r.timeouts.Backoff, attempt)
+	backoff(time.Duration(attempt) * r.timeouts.Backoff)
 
-	ctx, cancel := context.WithTimeout(parent, timeout)
+	ctx, cancel := context.WithTimeout(parent, r.timeouts.Delete)
 	defer cancel()
 
 	id, ch, err := r.sendDelete(ctx, key)

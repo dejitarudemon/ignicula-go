@@ -45,6 +45,8 @@ func toCompressionsList(compressors map[fields.Compression]compressor.Compressor
 	return result
 }
 
-func calculateTimeout(base time.Duration, backoff time.Duration, multiplier int) time.Duration {
-	return base + backoff*time.Duration(multiplier)
+func backoff(backoff time.Duration) {
+	if backoff != 0 {
+		time.Sleep(backoff)
+	}
 }

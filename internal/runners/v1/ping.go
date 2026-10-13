@@ -3,6 +3,7 @@ package runner_v1
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/dejitarudemon/ignicula-go/internal/runners"
 	table_v1 "github.com/dejitarudemon/ignicula-go/internal/table/v1"
@@ -41,9 +42,9 @@ func (r *Runner) Ping(ctx context.Context) error {
 // retry is true when the server reported a transient error and another
 // attempt is still allowed.
 func (r *Runner) pingOnce(parent context.Context, attempt int) (retry bool, err error) {
-	timeout := calculateTimeout(r.timeouts.Ping, r.timeouts.Backoff, attempt)
+	backoff(time.Duration(attempt) * r.timeouts.Backoff)
 
-	ctx, cancel := context.WithTimeout(parent, timeout)
+	ctx, cancel := context.WithTimeout(parent, r.timeouts.Ping)
 	defer cancel()
 
 	id, ch, err := r.sendPing(ctx)
