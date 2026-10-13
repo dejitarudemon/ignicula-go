@@ -51,14 +51,6 @@ func main() {
 	fmt.Printf("connected to %s\n", *addr)
 	printCommands()
 
-	readyCtx, readyCancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer readyCancel()
-	if err := cli.WaitReady(readyCtx); err != nil {
-		fmt.Fprintf(os.Stderr, "activate: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Println("ready")
-
 	lines := make(chan string)
 	go func() {
 		in := bufio.NewScanner(os.Stdin)

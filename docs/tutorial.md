@@ -4,7 +4,9 @@ Language: [Русский](tutorial.md) · [English](tutorial.en.md)
 
 Работа с [`client.Ignicula`](https://pkg.go.dev/github.com/dejitarudemon/ignicula-go/client#Ignicula). Подставьте свои `addr`, `Login` и `Hash`.
 
-## 1. Dial и WaitReady
+## 1. Dial
+
+`Dial` устанавливает TCP, делает Hello, активирует v1 и возвращает уже готовый клиент. Лимит ожидания — `ConnectTimeout` в конфиге (по умолчанию 30s).
 
 ```go
 cfg := configs.DefaultConnectionConfig()
@@ -15,15 +17,7 @@ if err != nil {
 	log.Fatal(err)
 }
 defer ignicula.Close()
-
-ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-defer cancel()
-if err := ignicula.WaitReady(ctx); err != nil {
-	log.Fatal(err)
-}
 ```
-
-`Dial` запускает Hello + Handshake в фоне. `WaitReady` ждёт готовности (или `ctx` / обрыв).
 
 ## 2. Ping
 

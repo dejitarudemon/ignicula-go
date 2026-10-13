@@ -19,7 +19,7 @@ go run ./cmd \
 | `-login` | `user` | Handshake login |
 | `-hash` | 32 zero bytes | Auth hash as 64 hex characters |
 
-On connect the CLI prints a command reference, waits until activation succeeds (`Ping`), then shows a `>` prompt. If the server drops the connection, the process exits with `disconnected: ...`.
+`Dial` already waits for activation (`ConnectTimeout` in the config). After a successful dial the CLI prints the command reference and shows a `>` prompt. If the server drops the connection, the process exits with `disconnected: ...`.
 
 ## Commands
 

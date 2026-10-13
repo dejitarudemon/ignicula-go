@@ -18,9 +18,8 @@ var (
 	ErrClosed       = transport.ErrClosed
 )
 
-// Ignicula is a client for an Ignicula server. Dial starts protocol activation
-// in the background; Ping, Read, Write, and Delete require a successful
-// activation.
+// Ignicula is a client for an Ignicula server. Dial blocks until protocol v1
+// is activated; Ping, Read, Write, and Delete can be used immediately after.
 type Ignicula struct {
 	conn *transport.Connection
 
@@ -31,8 +30,9 @@ type Ignicula struct {
 	closeOnce sync.Once
 }
 
-// Dial connects to addr, performs the Hello exchange, and starts v1 activation
-// asynchronously. A nil log uses a stderr text logger at info level.
+// Dial connects to addr, performs Hello, activates protocol v1, and waits until
+// the connection is ready. The wait is bounded by [configs.ConnectionConfig.ConnectTimeout].
+// A nil log uses a stderr text logger at info level.
 func Dial(addr string, cfg configs.ConnectionConfig, log logger.Logger) (*Ignicula, error) {
 	if log == nil {
 		log = implemented.NewText(slog.LevelInfo)
@@ -54,6 +54,21 @@ func Dial(addr string, cfg configs.ConnectionConfig, log logger.Logger) (*Ignicu
 	go func() {
 		i.err = conn.Start(ctx)
 	}()
+
+	timeout := cfg.ConnectTimeout
+	if timeout <= 0 {
+		timeout = configs.DefaultConnectionConfig().ConnectTimeout
+	}
+	readyCtx, readyCancel := context.WithTimeout(context.Background(), timeout)
+	defer readyCancel()
+
+	if err := conn.WaitReady(readyCtx); err != nil {
+		_ = i.Close()
+		if startErr := i.err; startErr != nil {
+			return nil, startErr
+		}
+		return nil, err
+	}
 
 	return i, nil
 }
@@ -101,20 +116,6 @@ func (i *Ignicula) check() error {
 	default:
 		return nil
 	}
-}
-
-// WaitReady blocks until background activation finishes and the connection can
-// serve Ping/Read/Write/Delete, or until ctx is done / the connection fails.
-func (i *Ignicula) WaitReady(ctx context.Context) error {
-	if err := i.check(); err != nil {
-		return err
-	}
-
-	err := i.conn.WaitReady(ctx)
-	if startErr := i.err; startErr != nil {
-		return startErr
-	}
-	return err
 }
 
 // Ping sends a protocol ping. If background Start has already failed, that

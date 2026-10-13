@@ -13,6 +13,7 @@ const (
 )
 
 type ConnectionConfig struct {
+	// ConnectTimeout bounds TCP dial, Hello, and v1 activation wait in [client.Dial].
 	ConnectTimeout time.Duration
 	ReadTimeout    time.Duration
 	WriteTimeout   time.Duration
@@ -23,10 +24,10 @@ type ConnectionConfig struct {
 	Auth      AuthConfig
 }
 
-// DefaultConnectionConfig returns connection settings with a 30s dial timeout,
-// 100s read/write deadlines (server idle-ping window), MustSupport version 1,
-// and [DefaultRunnerV1Config]. Auth is left empty and must be set by the caller
-// before connecting.
+// DefaultConnectionConfig returns connection settings with a 30s connect
+// timeout (TCP + Hello + activation), 100s read/write deadlines (server
+// idle-ping window), MustSupport version 1, and [DefaultRunnerV1Config].
+// Auth is left empty and must be set by the caller before connecting.
 func DefaultConnectionConfig() ConnectionConfig {
 	return ConnectionConfig{
 		ConnectTimeout: defaultConnectTimeout,

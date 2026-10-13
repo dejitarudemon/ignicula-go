@@ -68,7 +68,11 @@ func NewConnection(addr string, cfg configs.ConnectionConfig, logger logger.Logg
 		return nil, err
 	}
 
-	c, err := net.Dial(NET, addr)
+	dialTimeout := cfg.ConnectTimeout
+	if dialTimeout <= 0 {
+		dialTimeout = configs.DefaultConnectionConfig().ConnectTimeout
+	}
+	c, err := net.DialTimeout(NET, addr, dialTimeout)
 	if err != nil {
 		return nil, err
 	}

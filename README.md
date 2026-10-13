@@ -37,7 +37,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/dejitarudemon/ignicula-go/client"
 	"github.com/dejitarudemon/ignicula-go/configs"
@@ -57,19 +56,14 @@ func main() {
 	}
 	defer ignicula.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-	if err := ignicula.WaitReady(ctx); err != nil {
-		log.Fatal(err)
-	}
-
+	ctx := context.Background()
 	_ = ignicula.Write(ctx, []byte("greeting"), values.StringValue("hello"))
 	val, _ := ignicula.Read(ctx, []byte("greeting"))
 	fmt.Println(val)
 }
 ```
 
-`Dial` activates in the background — call `WaitReady` before other ops.
+`Dial` blocks until v1 is ready (`ConnectTimeout`, default 30s).
 
 ### CLI
 
@@ -102,7 +96,7 @@ go get github.com/dejitarudemon/ignicula-go@latest
 
 ### Быстрый старт
 
-Тот же пример, что в [English](#quick-start): `Dial` → `WaitReady` → `Write` / `Read`.
+Тот же пример, что в [English](#quick-start): `Dial` сразу возвращает готовый клиент.
 
 ### CLI
 
