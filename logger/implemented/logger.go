@@ -2,8 +2,9 @@ package implemented
 
 import (
 	"log/slog"
+	"os"
 
-	"github.com/dejitarudemon/ignicula-framework/logger"
+	"github.com/dejitarudemon/ignicula-go/logger"
 )
 
 // Logger forwards [logger.Logger] calls to a [slog.Logger].
@@ -17,6 +18,14 @@ func New(s *slog.Logger) *Logger {
 		s = slog.Default()
 	}
 	return &Logger{s: s}
+}
+
+// NewText returns a stderr text logger at level. A nil level uses [slog.LevelInfo].
+func NewText(level slog.Leveler) *Logger {
+	if level == nil {
+		level = slog.LevelInfo
+	}
+	return New(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level})))
 }
 
 var _ logger.Logger = (*Logger)(nil)
