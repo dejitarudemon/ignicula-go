@@ -17,7 +17,22 @@ const (
 
 func (t Type) String() string {
 	switch t {
-	// type here
+	case Bytes:
+		return "Bytes"
+	case TypedArray:
+		return "TypedArray"
+	case UntypedArray:
+		return "UntypedArray"
+	case Int64:
+		return "Int64"
+	case Uint64:
+		return "Uint64"
+	case Float64:
+		return "Float64"
+	case String:
+		return "String"
+	case JSON:
+		return "JSON"
 	}
 
 	return fmt.Sprintf("Unknown (%d)", t)
