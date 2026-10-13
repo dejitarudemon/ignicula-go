@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 
 	"github.com/dejitarudemon/ignicula-go/configs"
 	"github.com/dejitarudemon/ignicula-go/internal/transport"
@@ -25,7 +26,7 @@ type Ignicula struct {
 
 	ctx    context.Context
 	cancel context.CancelFunc
-	err    error
+	err    atomic.Value
 
 	closeOnce sync.Once
 }
@@ -52,7 +53,7 @@ func Dial(addr string, cfg configs.ConnectionConfig, log logger.Logger) (*Ignicu
 	}
 
 	go func() {
-		i.err = conn.Start(ctx)
+		i.err.Store(conn.Start(ctx))
 	}()
 
 	timeout := cfg.ConnectTimeout
@@ -64,7 +65,7 @@ func Dial(addr string, cfg configs.ConnectionConfig, log logger.Logger) (*Ignicu
 
 	if err := conn.WaitReady(readyCtx); err != nil {
 		_ = i.Close()
-		if startErr := i.err; startErr != nil {
+		if startErr, _ := i.err.Load().(error); startErr != nil {
 			return nil, startErr
 		}
 		return nil, err
@@ -82,7 +83,7 @@ func (i *Ignicula) Done() <-chan struct{} {
 // Err returns the reason [Ignicula.Done] was closed.
 // Before Done is closed it returns nil. See [transport.Connection.Err].
 func (i *Ignicula) Err() error {
-	if err := i.err; err != nil {
+	if err, _ := i.err.Load().(error); err != nil {
 		return err
 	}
 	return i.conn.Err()
@@ -96,7 +97,7 @@ func (i *Ignicula) Close() error {
 	i.closeOnce.Do(func() {
 		i.cancel()
 		closeErr := i.conn.Close()
-		if err := i.err; err != nil {
+		if err, _ := i.err.Load().(error); err != nil {
 			e = err
 			return
 		}
@@ -107,7 +108,7 @@ func (i *Ignicula) Close() error {
 }
 
 func (i *Ignicula) check() error {
-	if err := i.err; err != nil {
+	if err, _ := i.err.Load().(error); err != nil {
 		return err
 	}
 	select {
