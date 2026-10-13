@@ -6,9 +6,9 @@ Language: [Русский](tutorial.md) · [English](tutorial.en.md)
 
 Подставьте свои `addr`, `Login` и `Hash`.
 
-## 1. Dial и ожидание готовности
+## 1. Dial и WaitReady
 
-`Dial` возвращает `*Ignicula` и в фоне запускает Hello + Handshake. Операции до активации падают — обычно ждут успешного `Ping`.
+`Dial` возвращает `*Ignicula` и в фоне запускает Hello + Handshake. До готовности вызовите `WaitReady` — он блокируется, пока активация не завершится (или пока не сработают `ctx` / обрыв).
 
 ```go
 package main
@@ -37,19 +37,8 @@ func main() {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-
-	for {
-		if err := ignicula.Ping(ctx); err == nil {
-			log.Println("ready")
-			break
-		}
-		select {
-		case <-ctx.Done():
-			log.Fatal("activate:", ctx.Err())
-		case <-ignicula.Done():
-			log.Fatal("disconnected:", ignicula.Err())
-		case <-time.After(20 * time.Millisecond):
-		}
+	if err := ignicula.WaitReady(ctx); err != nil {
+		log.Fatal("activate:", err)
 	}
 
 	// дальше: Ping / Read / Write / Delete на этом же ignicula

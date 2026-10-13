@@ -12,6 +12,12 @@ import (
 	"github.com/dejitarudemon/ignicula-go/values"
 )
 
+// Re-exported connection lifecycle errors for callers that only import client.
+var (
+	ErrDisconnected = transport.ErrDisconnected
+	ErrClosed       = transport.ErrClosed
+)
+
 // Ignicula is a client for an Ignicula server. Dial starts protocol activation
 // in the background; Ping, Read, Write, and Delete require a successful
 // activation.
@@ -95,6 +101,20 @@ func (i *Ignicula) check() error {
 	default:
 		return nil
 	}
+}
+
+// WaitReady blocks until background activation finishes and the connection can
+// serve Ping/Read/Write/Delete, or until ctx is done / the connection fails.
+func (i *Ignicula) WaitReady(ctx context.Context) error {
+	if err := i.check(); err != nil {
+		return err
+	}
+
+	err := i.conn.WaitReady(ctx)
+	if startErr := i.err; startErr != nil {
+		return startErr
+	}
+	return err
 }
 
 // Ping sends a protocol ping. If background Start has already failed, that

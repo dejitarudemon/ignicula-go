@@ -51,31 +51,22 @@ func main() {
 		Hash:  [32]byte{}, // 32-byte auth hash from your server
 	}
 
-	cli, err := client.Dial("127.0.0.1:16000", cfg, nil)
+	ignicula, err := client.Dial("127.0.0.1:16000", cfg, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer cli.Close()
+	defer ignicula.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	for {
-		if err := cli.Ping(ctx); err == nil {
-			break
-		}
-		select {
-		case <-ctx.Done():
-			log.Fatal("activate:", ctx.Err())
-		case <-cli.Done():
-			log.Fatal("disconnected:", cli.Err())
-		case <-time.After(20 * time.Millisecond):
-		}
+	if err := ignicula.WaitReady(ctx); err != nil {
+		log.Fatal("activate:", err)
 	}
 
-	if err := cli.Write(ctx, []byte("greeting"), []byte("hello"), values.String); err != nil {
+	if err := ignicula.Write(ctx, []byte("greeting"), []byte("hello"), values.String); err != nil {
 		log.Fatal(err)
 	}
-	val, err := cli.Read(ctx, []byte("greeting"))
+	val, err := ignicula.Read(ctx, []byte("greeting"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -83,7 +74,7 @@ func main() {
 }
 ```
 
-`Dial` runs Hello and v1 activation in the background. Wait until `Ping` succeeds (or watch `Done`) before issuing other ops.
+`Dial` runs Hello and v1 activation in the background. Call `WaitReady` before other ops.
 
 ### Packages
 
@@ -129,7 +120,7 @@ go get github.com/dejitarudemon/ignicula-go@latest
 
 ### Быстрый старт
 
-Тот же пример, что в [English](#quick-start): `Dial` → дождаться успешного `Ping` → `Write` / `Read`. Активация идёт в фоне; операции до готовности вернут ошибку (часто «no active protocol version»).
+Тот же пример, что в [English](#quick-start): `Dial` → `WaitReady` → `Write` / `Read`. Активация идёт в фоне; до `WaitReady` операции ещё нельзя считать готовыми.
 
 ### Пакеты
 

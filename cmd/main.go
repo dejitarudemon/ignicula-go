@@ -14,7 +14,6 @@ import (
 
 	"github.com/dejitarudemon/ignicula-go/client"
 	"github.com/dejitarudemon/ignicula-go/configs"
-	"github.com/dejitarudemon/ignicula-go/internal/transport"
 	"github.com/dejitarudemon/ignicula-go/logger/implemented"
 	"github.com/dejitarudemon/ignicula-go/values"
 )
@@ -52,7 +51,9 @@ func main() {
 	fmt.Printf("connected to %s\n", *addr)
 	printCommands()
 
-	if err := waitReady(cli, 15*time.Second); err != nil {
+	readyCtx, readyCancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer readyCancel()
+	if err := cli.WaitReady(readyCtx); err != nil {
 		fmt.Fprintf(os.Stderr, "activate: %v\n", err)
 		os.Exit(1)
 	}
@@ -74,7 +75,7 @@ func main() {
 		fmt.Print("> ")
 		select {
 		case <-cli.Done():
-			if err := cli.Err(); err != nil && !errors.Is(err, transport.ErrClosed) {
+			if err := cli.Err(); err != nil && !errors.Is(err, client.ErrClosed) {
 				fmt.Fprintf(os.Stderr, "disconnected: %v\n", err)
 				os.Exit(1)
 			}
@@ -279,24 +280,4 @@ func parseHash(s string) ([32]byte, error) {
 	}
 	copy(out[:], raw)
 	return out, nil
-}
-
-func waitReady(cli *client.Ignicula, timeout time.Duration) error {
-	deadline := time.Now().Add(timeout)
-	var last error
-	for time.Now().Before(deadline) {
-		err := cli.Ping(context.Background())
-		if err == nil {
-			return nil
-		}
-		last = err
-		if !errors.Is(err, transport.ErrNoActiveVersion) && time.Since(deadline.Add(-timeout)) > time.Second {
-			return err
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
-	if last == nil {
-		return context.DeadlineExceeded
-	}
-	return last
 }

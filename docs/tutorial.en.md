@@ -6,9 +6,9 @@ Step-by-step use of [`client.Ignicula`](https://pkg.go.dev/github.com/dejitarude
 
 Replace `addr`, `Login`, and `Hash` with values your server expects.
 
-## 1. Dial and wait until ready
+## 1. Dial and WaitReady
 
-`Dial` returns `*Ignicula` and starts Hello + Handshake in the background. Ops before activation fail — typically you wait for a successful `Ping`.
+`Dial` returns `*Ignicula` and starts Hello + Handshake in the background. Call `WaitReady` before other ops — it blocks until activation finishes (or until `ctx` / disconnect).
 
 ```go
 package main
@@ -37,19 +37,8 @@ func main() {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-
-	for {
-		if err := ignicula.Ping(ctx); err == nil {
-			log.Println("ready")
-			break
-		}
-		select {
-		case <-ctx.Done():
-			log.Fatal("activate:", ctx.Err())
-		case <-ignicula.Done():
-			log.Fatal("disconnected:", ignicula.Err())
-		case <-time.After(20 * time.Millisecond):
-		}
+	if err := ignicula.WaitReady(ctx); err != nil {
+		log.Fatal("activate:", err)
 	}
 
 	// continue with Ping / Read / Write / Delete on this ignicula
