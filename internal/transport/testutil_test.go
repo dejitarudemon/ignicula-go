@@ -31,6 +31,7 @@ func testConnConfig() configs.ConnectionConfig {
 			MaxRequestSize:  1 << 20,
 			MaxBatchSize:    64,
 			MaxAttempts:     1,
+			ReadTimeout:     time.Second,
 			PingTimeout:     time.Second,
 		},
 		Auth: configs.AuthConfig{
