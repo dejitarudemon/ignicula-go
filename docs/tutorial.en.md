@@ -4,6 +4,25 @@ Language: [Русский](tutorial.md) · [English](tutorial.en.md)
 
 Using [`client.Ignicula`](https://pkg.go.dev/github.com/dejitarudemon/ignicula-go/client#Ignicula). Replace `addr`, `Login`, and `Hash` for your server.
 
+## Guarantees
+
+What the client promises:
+
+- **After a successful `Dial`**, the connection is activated (Hello + Handshake); you may call `Ping` / `Read` / `Write` / `Delete` immediately.
+- **Each op waits for a server answer** (or an error / attempt timeout). A successful return from `Write` / `Delete` means the server sent a successful Answer.
+- **Transient errors** (`RequestsConflict`, `InternalError`) are retried automatically, up to `RuntimeV1.MaxAttempts` (default 3) with backoff.
+- **A dropped connection** fails in-flight ops and makes later calls fail too. Watching `Done` is optional.
+- **`Close` is idempotent** and is not logged as a fatal reader error (unlike peer disconnect).
+
+What it does not promise:
+
+- **Exactly-once on the wire under retries** — a request may be resent; server/key idempotency is your concern if it matters.
+- **Global ordering across goroutines** — concurrent calls on one `Ignicula` are fine, but delivery/apply order between them is not fixed.
+- **Durability without an answer** — if `ctx` is canceled or the socket dies before Answer, the server outcome is unknown; re-read or design an idempotent write.
+- **Automatic reconnect** — after `Done`, dial again.
+
+Default timeouts: `ConnectTimeout` 30s (whole `Dial`), CRUD 30s per attempt, Ping 5s, socket read/write 100s.
+
 ## 1. Dial
 
 `Dial` opens TCP, runs Hello, activates v1, and returns a ready client. The wait is bounded by `ConnectTimeout` in the config (default 30s).
