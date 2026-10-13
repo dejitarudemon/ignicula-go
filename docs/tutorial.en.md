@@ -2,11 +2,13 @@ Language: [Русский](tutorial.md) · [English](tutorial.en.md)
 
 # Tutorials
 
-Step-by-step client usage against a running Ignicula server. Interactive shell: [CLI](cli.en.md).
+Step-by-step use of [`client.Ignicula`](https://pkg.go.dev/github.com/dejitarudemon/ignicula-go/client#Ignicula) against a running server.
 
 Replace `addr`, `Login`, and `Hash` with values your server expects.
 
 ## 1. Dial and wait until ready
+
+`Dial` returns `*Ignicula` and starts Hello + Handshake in the background. Ops before activation fail — typically you wait for a successful `Ping`.
 
 ```go
 package main
@@ -27,45 +29,47 @@ func main() {
 		Hash:  [32]byte{ /* 32 bytes */ },
 	}
 
-	cli, err := client.Dial("127.0.0.1:16000", cfg, nil)
+	ignicula, err := client.Dial("127.0.0.1:16000", cfg, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer cli.Close()
+	defer ignicula.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
 	for {
-		if err := cli.Ping(ctx); err == nil {
+		if err := ignicula.Ping(ctx); err == nil {
 			log.Println("ready")
-			return
+			break
 		}
 		select {
 		case <-ctx.Done():
 			log.Fatal("activate:", ctx.Err())
-		case <-cli.Done():
-			log.Fatal("disconnected:", cli.Err())
+		case <-ignicula.Done():
+			log.Fatal("disconnected:", ignicula.Err())
 		case <-time.After(20 * time.Millisecond):
 		}
 	}
+
+	// continue with Ping / Read / Write / Delete on this ignicula
 }
 ```
 
-Until Handshake finishes, `Ping` fails (activation still in progress). Retry until success, deadline, or `Done`. A nil logger uses a stderr text logger at info level.
+A nil logger uses a stderr text logger at info level.
 
 ## 2. Ping
 
 ```go
 ctx := context.Background()
-if err := cli.Ping(ctx); err != nil {
+if err := ignicula.Ping(ctx); err != nil {
 	log.Fatal(err)
 }
 ```
 
 ## 3. Write and read scalars
 
-`Write` builds a value with `values.New`. Omit the type to store **bytes**.
+`Ignicula.Write` builds a value with `values.New`. Omit the type to store **bytes**.
 
 ```go
 import "github.com/dejitarudemon/ignicula-go/values"
@@ -73,11 +77,11 @@ import "github.com/dejitarudemon/ignicula-go/values"
 ctx := context.Background()
 key := []byte("user:1:name")
 
-if err := cli.Write(ctx, key, []byte("alice"), values.String); err != nil {
+if err := ignicula.Write(ctx, key, []byte("alice"), values.String); err != nil {
 	log.Fatal(err)
 }
 
-val, err := cli.Read(ctx, key)
+val, err := ignicula.Read(ctx, key)
 if err != nil {
 	log.Fatal(err)
 }
@@ -92,13 +96,15 @@ default:
 Numeric and JSON examples:
 
 ```go
-_ = cli.Write(ctx, []byte("n"), []byte("-42"), values.Int64)
-_ = cli.Write(ctx, []byte("u"), []byte("42"), values.Uint64)
-_ = cli.Write(ctx, []byte("f"), []byte("3.14"), values.Float64)
-_ = cli.Write(ctx, []byte("j"), []byte(`{"ok":true}`), values.JSON)
+_ = ignicula.Write(ctx, []byte("n"), []byte("-42"), values.Int64)
+_ = ignicula.Write(ctx, []byte("u"), []byte("42"), values.Uint64)
+_ = ignicula.Write(ctx, []byte("f"), []byte("3.14"), values.Float64)
+_ = ignicula.Write(ctx, []byte("j"), []byte(`{"ok":true}`), values.JSON)
 ```
 
-## 4. Write arrays with WriteValue
+## 4. Arrays with WriteValue
+
+For arrays (and any ready `values.Value`) use `Ignicula.WriteValue`:
 
 ```go
 typed, err := values.NewTypedArray(
@@ -109,7 +115,7 @@ typed, err := values.NewTypedArray(
 if err != nil {
 	log.Fatal(err)
 }
-if err := cli.WriteValue(ctx, []byte("tags"), typed); err != nil {
+if err := ignicula.WriteValue(ctx, []byte("tags"), typed); err != nil {
 	log.Fatal(err)
 }
 
@@ -120,41 +126,49 @@ mixed, err := values.NewUntypedArray(
 if err != nil {
 	log.Fatal(err)
 }
-if err := cli.WriteValue(ctx, []byte("mix"), mixed); err != nil {
+if err := ignicula.WriteValue(ctx, []byte("mix"), mixed); err != nil {
 	log.Fatal(err)
 }
-```
 
-`Read` returns the same client types (including arrays) after adapter conversion.
+val, err := ignicula.Read(ctx, []byte("tags"))
+if err != nil {
+	log.Fatal(err)
+}
+if arr, ok := val.(values.TypedArrayValue); ok {
+	log.Printf("elemType=%s len=%d", arr.ElemType, len(arr.Elems))
+}
+```
 
 ## 5. Delete
 
 ```go
-if err := cli.Delete(ctx, []byte("user:1:name")); err != nil {
+if err := ignicula.Delete(ctx, []byte("user:1:name")); err != nil {
 	log.Fatal(err)
 }
 ```
 
 ## 6. Watch for disconnect
 
+`Ignicula` exposes `Done` / `Err` for connection liveness:
+
 ```go
 go func() {
-	<-cli.Done()
-	log.Println("connection ended:", cli.Err())
+	<-ignicula.Done()
+	log.Println("connection ended:", ignicula.Err())
 }()
 
-// ... use cli ...
+// ... use ignicula ...
 
 select {
-case <-cli.Done():
-	if err := cli.Err(); err != nil {
+case <-ignicula.Done():
+	if err := ignicula.Err(); err != nil {
 		log.Println("disconnected:", err)
 	}
 default:
 }
 ```
 
-After `Done`, further ops return the same error from `Err()` (typically wrapping `transport.ErrDisconnected`, or `transport.ErrClosed` after a clean `Close`).
+After `Done`, further `Ping` / `Read` / `Write` / `Delete` calls return the same error as `Err()` (typically wrapping `ErrDisconnected`, or `ErrClosed` after a clean `Close`).
 
 ## 7. Custom config and logger
 
@@ -173,7 +187,7 @@ cfg.RuntimeV1.MaxAttempts = 5
 cfg.Auth = configs.AuthConfig{Login: "user", Hash: hash}
 
 log := implemented.NewText(slog.LevelDebug)
-cli, err := client.Dial(addr, cfg, log)
+ignicula, err := client.Dial(addr, cfg, log)
 ```
 
 Pass any `logger.Logger` implementation, or `nil` for the default.
