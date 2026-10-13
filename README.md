@@ -63,7 +63,7 @@ func main() {
 		log.Fatal("activate:", err)
 	}
 
-	if err := ignicula.Write(ctx, []byte("greeting"), []byte("hello"), values.String); err != nil {
+	if err := ignicula.Write(ctx, []byte("greeting"), values.StringValue("hello")); err != nil {
 		log.Fatal(err)
 	}
 	val, err := ignicula.Read(ctx, []byte("greeting"))

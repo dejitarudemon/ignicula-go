@@ -58,7 +58,7 @@ if err := ignicula.Ping(ctx); err != nil {
 
 ## 3. Запись и чтение скаляров
 
-`Ignicula.Write` собирает значение через `values.New`. Без типа пишутся **bytes**.
+`Ignicula.Write` принимает любой `values.Value`.
 
 ```go
 import "github.com/dejitarudemon/ignicula-go/values"
@@ -66,7 +66,7 @@ import "github.com/dejitarudemon/ignicula-go/values"
 ctx := context.Background()
 key := []byte("user:1:name")
 
-if err := ignicula.Write(ctx, key, []byte("alice"), values.String); err != nil {
+if err := ignicula.Write(ctx, key, values.StringValue("alice")); err != nil {
 	log.Fatal(err)
 }
 
@@ -82,18 +82,19 @@ default:
 }
 ```
 
-Числа и JSON:
+Числа и JSON (через конструкторы или `values.New`):
 
 ```go
-_ = ignicula.Write(ctx, []byte("n"), []byte("-42"), values.Int64)
-_ = ignicula.Write(ctx, []byte("u"), []byte("42"), values.Uint64)
-_ = ignicula.Write(ctx, []byte("f"), []byte("3.14"), values.Float64)
-_ = ignicula.Write(ctx, []byte("j"), []byte(`{"ok":true}`), values.JSON)
+_ = ignicula.Write(ctx, []byte("n"), values.Int64Value(-42))
+_ = ignicula.Write(ctx, []byte("u"), values.Uint64Value(42))
+_ = ignicula.Write(ctx, []byte("f"), values.Float64Value(3.14))
+j, _ := values.New(values.JSON, []byte(`{"ok":true}`))
+_ = ignicula.Write(ctx, []byte("j"), j)
 ```
 
-## 4. Массивы через WriteValue
+## 4. Массивы
 
-Для массивов (и любого готового `values.Value`) используйте `Ignicula.WriteValue`:
+Тот же `Write` — передайте typed/untyped array:
 
 ```go
 typed, err := values.NewTypedArray(
@@ -104,7 +105,7 @@ typed, err := values.NewTypedArray(
 if err != nil {
 	log.Fatal(err)
 }
-if err := ignicula.WriteValue(ctx, []byte("tags"), typed); err != nil {
+if err := ignicula.Write(ctx, []byte("tags"), typed); err != nil {
 	log.Fatal(err)
 }
 
@@ -115,7 +116,7 @@ mixed, err := values.NewUntypedArray(
 if err != nil {
 	log.Fatal(err)
 }
-if err := ignicula.WriteValue(ctx, []byte("mix"), mixed); err != nil {
+if err := ignicula.Write(ctx, []byte("mix"), mixed); err != nil {
 	log.Fatal(err)
 }
 

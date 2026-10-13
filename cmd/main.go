@@ -144,7 +144,7 @@ func runCommand(cli *client.Ignicula, line string) bool {
 			typName = strings.ToLower(typ.String())
 		}
 		start := time.Now()
-		err = cli.WriteValue(context.Background(), []byte(key), val)
+		err = cli.Write(context.Background(), []byte(key), val)
 		elapsed := time.Since(start)
 		if err != nil {
 			fmt.Printf("write: %s (%s)\n", err, elapsed.Round(time.Microsecond))
@@ -165,7 +165,7 @@ func runCommand(cli *client.Ignicula, line string) bool {
 			return true
 		}
 		start := time.Now()
-		err = cli.WriteValue(context.Background(), []byte(key), val)
+		err = cli.Write(context.Background(), []byte(key), val)
 		elapsed := time.Since(start)
 		if err != nil {
 			fmt.Printf("writetyped: %s (%s)\n", err, elapsed.Round(time.Microsecond))
@@ -186,7 +186,7 @@ func runCommand(cli *client.Ignicula, line string) bool {
 			return true
 		}
 		start := time.Now()
-		err = cli.WriteValue(context.Background(), []byte(key), val)
+		err = cli.Write(context.Background(), []byte(key), val)
 		elapsed := time.Since(start)
 		if err != nil {
 			fmt.Printf("writeuntyped: %s (%s)\n", err, elapsed.Round(time.Microsecond))

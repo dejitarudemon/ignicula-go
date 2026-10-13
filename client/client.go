@@ -137,25 +137,9 @@ func (i *Ignicula) Read(ctx context.Context, key []byte) (values.Value, error) {
 	return i.conn.Read(ctx, key)
 }
 
-// Write stores data under key using typ. When typ is omitted, [values.Bytes]
-// is used. If background Start has already failed, that error is returned
-// instead.
-func (i *Ignicula) Write(ctx context.Context, key, data []byte, typ ...values.Type) error {
-	want := values.Bytes
-	if len(typ) > 0 {
-		want = typ[0]
-	}
-
-	value, err := values.New(want, data)
-	if err != nil {
-		return err
-	}
-	return i.WriteValue(ctx, key, value)
-}
-
-// WriteValue stores value under key. If background Start has already failed,
-// that error is returned instead.
-func (i *Ignicula) WriteValue(ctx context.Context, key []byte, value values.Value) error {
+// Write stores value under key. If background Start has already failed, that
+// error is returned instead.
+func (i *Ignicula) Write(ctx context.Context, key []byte, value values.Value) error {
 	if err := i.check(); err != nil {
 		return err
 	}
