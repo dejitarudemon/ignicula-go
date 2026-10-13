@@ -3,9 +3,25 @@ package runner_v1
 import (
 	"time"
 
+	"github.com/dejitarudemon/ignicula-wire/v1/buffer"
 	"github.com/dejitarudemon/ignicula-wire/v1/compressor"
 	"github.com/dejitarudemon/ignicula-wire/v1/fields"
+	"github.com/dejitarudemon/ignicula-wire/v1/frame"
 )
+
+// encodeFrame encodes frm using a pooled [buffer.Slice] and returns a copy of
+// the bytes. The buffer is returned to the pool before encodeFrame returns.
+func (r *Runner) encodeFrame(frm frame.Frame, c compressor.Compressor) ([]byte, error) {
+	buf := r.bufPool.Get().(*buffer.Slice)
+	buf.Preallocate(frm.Size())
+	buf.Clean()
+	defer r.bufPool.Put(buf)
+
+	if err := frm.Encode(buf, c); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
 
 func toCompressionsMap(compressors []compressor.Compressor) map[fields.Compression]compressor.Compressor {
 	result := make(map[fields.Compression]compressor.Compressor)

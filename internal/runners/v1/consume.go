@@ -9,7 +9,6 @@ import (
 	table_v1 "github.com/dejitarudemon/ignicula-go/internal/table/v1"
 	"github.com/dejitarudemon/ignicula-wire/v1/body"
 	"github.com/dejitarudemon/ignicula-wire/v1/body/bodies"
-	"github.com/dejitarudemon/ignicula-wire/v1/buffer"
 	"github.com/dejitarudemon/ignicula-wire/v1/fields"
 	"github.com/dejitarudemon/ignicula-wire/v1/frame"
 )
@@ -75,10 +74,8 @@ func (r *Runner) replyServerPing(ctx context.Context, id fields.RequestID) error
 		return runners.NewCloseConnection(runners.NewInternalError(err))
 	}
 
-	buf := buffer.Slice{}
-	buf.Preallocate(response.Size())
-
-	if err := response.Encode(&buf, nil); err != nil {
+	raw, err := r.encodeFrame(response, nil)
+	if err != nil {
 		return runners.NewCloseConnection(runners.NewInternalError(err))
 	}
 
@@ -87,7 +84,7 @@ func (r *Runner) replyServerPing(ctx context.Context, id fields.RequestID) error
 		return runners.NewCloseConnection(ctx.Err())
 	case <-r.close:
 		return runners.NewCloseConnection(runners.ErrRunnerClosed)
-	case r.requests <- buf.Bytes():
+	case r.requests <- raw:
 		return nil
 	}
 }

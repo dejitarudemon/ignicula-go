@@ -16,6 +16,8 @@ var (
 	ErrActivating = errors.New("runner is activating")
 	// ErrPingExhausted is returned when Ping used up all retry attempts.
 	ErrPingExhausted = errors.New("ping exhausted attempts")
+	// ErrReadExhausted is returned when Read used up all retry attempts.
+	ErrReadExhausted = errors.New("read exhausted attempts")
 	// ErrFailedCastBatchAnswer is returned when an Answer cannot be cast to BatchAnswer.
 	ErrFailedCastBatchAnswer = errors.New("failed to cast Answer to BatchAnswer")
 	// ErrRunnerClosed is returned when the runner has been closed.

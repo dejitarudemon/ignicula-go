@@ -6,8 +6,10 @@ import (
 	"sync/atomic"
 
 	"github.com/dejitarudemon/ignicula-go/configs"
+	adapters_v1 "github.com/dejitarudemon/ignicula-go/internal/adapters/v1"
 	"github.com/dejitarudemon/ignicula-go/internal/runners"
 	table_v1 "github.com/dejitarudemon/ignicula-go/internal/table/v1"
+	"github.com/dejitarudemon/ignicula-wire/v1/buffer"
 	"github.com/dejitarudemon/ignicula-wire/v1/builder"
 	"github.com/dejitarudemon/ignicula-wire/v1/compressor"
 	"github.com/dejitarudemon/ignicula-wire/v1/decoder"
@@ -22,7 +24,11 @@ type Runner struct {
 
 	table *table_v1.RequestsV1
 
+	adapter adapters_v1.Adapter
+
 	requests chan<- []byte
+
+	bufPool *sync.Pool
 
 	timeouts Timeouts
 
@@ -53,10 +59,16 @@ func NewRunner(table *table_v1.RequestsV1, requests chan<- []byte, cfg configs.R
 		builder:            builder.NewFrameBuilder(cfg.MaxRequestSize),
 		info:               NewServerInfo(),
 		table:              table,
+		adapter:            adapters_v1.New(),
 		requests:           requests,
 		ready:              make(chan struct{}),
 		close:              make(chan struct{}),
 		clientCompressions: compressors,
+		bufPool: &sync.Pool{
+			New: func() any {
+				return &buffer.Slice{}
+			},
+		},
 		timeouts: Timeouts{
 			Read:        cfg.ReadTimeout,
 			Write:       cfg.WriteTimeout,

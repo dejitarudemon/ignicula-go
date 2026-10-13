@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/dejitarudemon/ignicula-go/internal/runners"
-	"github.com/dejitarudemon/ignicula-wire/v1/buffer"
 )
 
 // Activate sends a Handshake (request id 0, not registered in the table) and
@@ -27,14 +26,13 @@ func (r *Runner) Activate(ctx context.Context, login string, hash [32]byte) erro
 		return runners.NewInternalError(err)
 	}
 
-	buf := buffer.Slice{}
-	buf.Preallocate(handshake.Size())
-	if err := handshake.Encode(&buf, nil); err != nil {
+	raw, err := r.encodeFrame(handshake, nil)
+	if err != nil {
 		return runners.NewInternalError(err)
 	}
 
 	r.activating.Store(true)
-	if err := r.send(ctx, buf.Bytes()); err != nil {
+	if err := r.send(ctx, raw); err != nil {
 		r.activating.Store(false)
 		return runners.NewInternalError(err)
 	}

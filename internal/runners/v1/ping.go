@@ -8,7 +8,6 @@ import (
 	table_v1 "github.com/dejitarudemon/ignicula-go/internal/table/v1"
 	"github.com/dejitarudemon/ignicula-wire/v1/body"
 	"github.com/dejitarudemon/ignicula-wire/v1/body/bodies"
-	"github.com/dejitarudemon/ignicula-wire/v1/buffer"
 	protocolerrs "github.com/dejitarudemon/ignicula-wire/v1/err/errs"
 	"github.com/dejitarudemon/ignicula-wire/v1/fields"
 )
@@ -88,14 +87,13 @@ func (r *Runner) sendPing(ctx context.Context) (fields.RequestID, table_v1.Respo
 		return 0, nil, runners.NewInternalError(err)
 	}
 
-	buf := buffer.Slice{}
-	buf.Preallocate(frm.Size())
-	if err := frm.Encode(&buf, nil); err != nil {
+	raw, err := r.encodeFrame(frm, nil)
+	if err != nil {
 		r.table.Terminate(id)
 		return 0, nil, runners.NewInternalError(err)
 	}
 
-	if err := r.send(ctx, buf.Bytes()); err != nil {
+	if err := r.send(ctx, raw); err != nil {
 		r.table.Terminate(id)
 		return 0, nil, runners.NewInternalError(err)
 	}
