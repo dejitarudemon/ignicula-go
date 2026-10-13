@@ -48,6 +48,7 @@ func Dial(addr string, cfg configs.ConnectionConfig, log logger.Logger) (*Ignicu
 	}
 
 	if err := ctxConnect.Err(); err != nil {
+		_ = conn.Close()
 		return nil, err
 	}
 
@@ -62,11 +63,6 @@ func Dial(addr string, cfg configs.ConnectionConfig, log logger.Logger) (*Ignicu
 	go func() {
 		i.err.Store(conn.Start(ctx))
 	}()
-
-	timeout := cfg.ConnectTimeout
-	if timeout <= 0 {
-		timeout = configs.DefaultConnectionConfig().ConnectTimeout
-	}
 
 	if err := conn.WaitReady(ctxConnect); err != nil {
 		_ = i.Close()

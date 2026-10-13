@@ -2,6 +2,7 @@ package transport
 
 import (
 	"bufio"
+	"context"
 	"io"
 	"net"
 	"sync"
@@ -257,7 +258,7 @@ func dialOK(t *testing.T, log logger.Logger) (*Connection, net.Conn, *bufio.Read
 		}
 	}()
 
-	conn, err := NewConnection(addr, testConnConfig(), log)
+	conn, err := NewConnection(context.Background(), addr, testConnConfig(), log)
 	if err != nil {
 		stopListen()
 		t.Fatalf("NewConnection = %v", err)

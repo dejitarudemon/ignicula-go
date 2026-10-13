@@ -1,6 +1,7 @@
 package transport
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net"
@@ -9,6 +10,15 @@ import (
 
 func deadline(timeout time.Duration) time.Time {
 	return time.Now().Add(timeout)
+}
+
+// remainingTimeout returns how long is left on ctx's deadline, or fallback
+// when the context has no deadline.
+func remainingTimeout(ctx context.Context, fallback time.Duration) time.Duration {
+	if deadline, ok := ctx.Deadline(); ok {
+		return time.Until(deadline)
+	}
+	return fallback
 }
 
 // shuttingDown reports whether [Connection.Close] / [Connection.closeConn]

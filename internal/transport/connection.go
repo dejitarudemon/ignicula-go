@@ -7,7 +7,6 @@ import (
 	"slices"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/dejitarudemon/ignicula-go/configs"
 	runner_v1 "github.com/dejitarudemon/ignicula-go/internal/runners/v1"
@@ -70,13 +69,7 @@ func NewConnection(ctx context.Context, addr string, cfg configs.ConnectionConfi
 		return nil, err
 	}
 
-	timeout := cfg.ConnectTimeout
-
-	if deadline, ok := ctx.Deadline(); ok {
-		timeout = deadline.Sub(time.Now())
-	}
-
-	c, err := net.DialTimeout(NET, addr, timeout)
+	c, err := net.DialTimeout(NET, addr, remainingTimeout(ctx, cfg.ConnectTimeout))
 	if err != nil {
 		return nil, err
 	}
@@ -96,12 +89,7 @@ func NewConnection(ctx context.Context, addr string, cfg configs.ConnectionConfi
 		auth:       cfg.Auth,
 	}
 
-	timeout = cfg.ConnectTimeout
-	if deadline, ok := ctx.Deadline(); ok {
-		timeout = deadline.Sub(time.Now())
-	}
-
-	if err := conn.hello(timeout); err != nil {
+	if err := conn.hello(remainingTimeout(ctx, cfg.ConnectTimeout)); err != nil {
 		conn.error("connect to Ignicula server fail", "addr", addr, "error", err)
 
 		_ = c.Close()

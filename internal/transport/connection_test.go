@@ -2,6 +2,7 @@ package transport
 
 import (
 	"bufio"
+	"context"
 	"net"
 	"strings"
 	"testing"
@@ -19,7 +20,7 @@ func TestNewConnection_UnsupportedVersion(t *testing.T) {
 	cfg := testConnConfig()
 	cfg.MustSupport = []fieldsV0.Version{99}
 
-	_, err := NewConnection("127.0.0.1:1", cfg, nil)
+	_, err := NewConnection(context.Background(), "127.0.0.1:1", cfg, nil)
 	if err == nil || !strings.Contains(err.Error(), "doesn't support") {
 		t.Fatalf("NewConnection = %v, want unsupported version", err)
 	}
@@ -33,7 +34,7 @@ func TestNewConnection_DialFail(t *testing.T) {
 	addr := ln.Addr().String()
 	_ = ln.Close()
 
-	_, err = NewConnection(addr, testConnConfig(), nil)
+	_, err = NewConnection(context.Background(), addr, testConnConfig(), nil)
 	if err == nil {
 		t.Fatal("NewConnection = nil, want dial error")
 	}
@@ -85,7 +86,7 @@ func TestNewConnection_ServerMissingVersion(t *testing.T) {
 		errCh <- err
 	}()
 
-	_, err := NewConnection(addr, testConnConfig(), &recLogger{})
+	_, err := NewConnection(context.Background(), addr, testConnConfig(), &recLogger{})
 	if err == nil || !strings.Contains(err.Error(), "doesn't support") {
 		t.Fatalf("NewConnection = %v, want missing version", err)
 	}
@@ -130,7 +131,7 @@ func TestNewConnection_UnexpectedHelloVersion(t *testing.T) {
 		errCh <- err
 	}()
 
-	_, err := NewConnection(addr, testConnConfig(), nil)
+	_, err := NewConnection(context.Background(), addr, testConnConfig(), nil)
 	if err == nil || !strings.Contains(err.Error(), "unexpected") {
 		t.Fatalf("NewConnection = %v, want unexpected version", err)
 	}
@@ -152,7 +153,7 @@ func TestNewConnection_HelloTimeout(t *testing.T) {
 	cfg := testConnConfig()
 	cfg.ConnectTimeout = 50 * time.Millisecond
 
-	_, err := NewConnection(addr, cfg, nil)
+	_, err := NewConnection(context.Background(), addr, cfg, nil)
 	if err == nil {
 		t.Fatal("NewConnection = nil, want timeout")
 	}
@@ -172,7 +173,7 @@ func TestNewConnection_EmptyHello(t *testing.T) {
 		_ = c.Close()
 	}()
 
-	_, err := NewConnection(addr, testConnConfig(), nil)
+	_, err := NewConnection(context.Background(), addr, testConnConfig(), nil)
 	if err == nil {
 		t.Fatal("NewConnection = nil, want read error")
 	}
