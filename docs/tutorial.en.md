@@ -2,7 +2,7 @@ Language: [Русский](tutorial.md) · [English](tutorial.en.md)
 
 # Tutorials
 
-Using [`client.Ignicula`](https://pkg.go.dev/github.com/dejitarudemon/ignicula-go/client#Ignicula). Replace `addr`, `Login`, and `Hash` for your server.
+Using [`client.Ignicula`](https://pkg.go.dev/github.com/dejitarudemon/ignicula-go/client#Ignicula). Replace `addr`, `Login`, and `Password` for your server.
 
 ## Guarantees
 
@@ -16,10 +16,10 @@ What the client promises:
 
 What it does not promise:
 
-- **Exactly-once on the wire under retries** — a request may be resent; server/key idempotency is your concern if it matters.
-- **Global ordering across goroutines** — concurrent calls on one `Ignicula` are fine, but delivery/apply order between them is not fixed.
-- **Durability without an answer** — if `ctx` is canceled or the socket dies before Answer, the server outcome is unknown; re-read or design an idempotent write.
-- **Automatic reconnect** — after `Done`, dial again.
+- **Exactly-once on the wire under retries** — a retry may resend the request; if idempotency matters, it is usually handled on the server or by how keys are chosen.
+- **Global ordering across goroutines** — concurrent calls on one `Ignicula` are fine, but delivery and apply order between them is not guaranteed.
+- **Durability without an answer** — if `ctx` is canceled or the socket drops before Answer, the server outcome may be unknown; re-reading the value is a common follow-up.
+- **Automatic reconnect** — after `Done` the connection is not restored automatically; call `Dial` again.
 
 Default timeouts: `ConnectTimeout` 30s (whole `Dial`), CRUD 30s per attempt, Ping 5s, socket read/write 100s.
 
@@ -29,7 +29,7 @@ Default timeouts: `ConnectTimeout` 30s (whole `Dial`), CRUD 30s per attempt, Pin
 
 ```go
 cfg := configs.DefaultConnectionConfig()
-cfg.Auth = configs.AuthConfig{Login: "user", Hash: [32]byte{ /* … */ }}
+cfg.Auth = configs.AuthConfig{Login: "user", Password: "secret"}
 
 ignicula, err := client.Dial("127.0.0.1:16000", cfg, nil)
 if err != nil {
@@ -49,9 +49,9 @@ if err := ignicula.Ping(ctx); err != nil {
 ## 3. Write / Read
 
 ```go
-_ = ignicula.Write(ctx, []byte("name"), values.StringValue("alice"))
-_ = ignicula.Write(ctx, []byte("n"), values.Int64Value(-42))
-_ = ignicula.Write(ctx, []byte("j"), values.JSONValue(`{"ok":true}`))
+if err := ignicula.Write(ctx, []byte("name"), values.StringValue("alice")); err != nil {
+	log.Fatal(err)
+}
 
 val, err := ignicula.Read(ctx, []byte("name"))
 if err != nil {
@@ -63,17 +63,29 @@ fmt.Println(val)
 ## 4. Arrays
 
 ```go
-tags, _ := values.NewTypedArray(values.String, values.StringValue("a"), values.StringValue("b"))
-_ = ignicula.Write(ctx, []byte("tags"), tags)
+tags, err := values.NewTypedArray(values.String, values.StringValue("a"), values.StringValue("b"))
+if err != nil {
+	log.Fatal(err)
+}
+if err := ignicula.Write(ctx, []byte("tags"), tags); err != nil {
+	log.Fatal(err)
+}
 
-mix, _ := values.NewUntypedArray(values.StringValue("hello"), values.Int64Value(-7))
-_ = ignicula.Write(ctx, []byte("mix"), mix)
+mix, err := values.NewUntypedArray(values.StringValue("hello"), values.Int64Value(-7))
+if err != nil {
+	log.Fatal(err)
+}
+if err := ignicula.Write(ctx, []byte("mix"), mix); err != nil {
+	log.Fatal(err)
+}
 ```
 
 ## 5. Delete
 
 ```go
-_ = ignicula.Delete(ctx, []byte("name"))
+if err := ignicula.Delete(ctx, []byte("name")); err != nil {
+	log.Fatal(err)
+}
 ```
 
 ## 6. Done and Err (optional)

@@ -11,7 +11,15 @@ func (c *Connection) startV1Activation(ctx context.Context) error {
 		return nil
 	}
 
-	if err := c.runner_v1.Activate(ctx, c.auth.Login, c.auth.Hash); err != nil {
+	login := c.auth.Login
+	var h [32]byte
+	if c.auth.UseAnonim {
+		login = ""
+	} else {
+		h = hash(c.auth.Password)
+	}
+
+	if err := c.runner_v1.Activate(ctx, login, h); err != nil {
 		return err
 	}
 

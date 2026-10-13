@@ -46,8 +46,8 @@ import (
 func main() {
 	cfg := configs.DefaultConnectionConfig()
 	cfg.Auth = configs.AuthConfig{
-		Login: "user",
-		Hash:  [32]byte{}, // 32-byte auth hash from your server
+		Login:    "user",
+		Password: "secret",
 	}
 
 	ignicula, err := client.Dial("127.0.0.1:16000", cfg, nil)
@@ -68,7 +68,7 @@ func main() {
 ### CLI
 
 ```bash
-go run ./cmd -addr 127.0.0.1:16000 -login user -hash <64 hex chars>
+go run ./cmd -addr 127.0.0.1:16000 -login user -password secret
 ```
 
 See [CLI](docs/cli.en.md) for commands.
@@ -101,7 +101,7 @@ go get github.com/dejitarudemon/ignicula-go@latest
 ### CLI
 
 ```bash
-go run ./cmd -addr 127.0.0.1:16000 -login user -hash <64 hex символа>
+go run ./cmd -addr 127.0.0.1:16000 -login user -password secret
 ```
 
 Команды — в [CLI](docs/cli.md).

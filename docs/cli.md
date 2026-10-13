@@ -10,14 +10,15 @@ Language: [Русский](cli.md) · [English](cli.en.md)
 go run ./cmd \
   -addr 127.0.0.1:16000 \
   -login user \
-  -hash 0000000000000000000000000000000000000000000000000000000000000000
+  -password secret
 ```
 
 | Флаг | По умолчанию | Смысл |
 | --- | --- | --- |
 | `-addr` | `127.0.0.1:16000` | `host:port` |
 | `-login` | `user` | Login для Handshake |
-| `-hash` | 32 нулевых байта | Auth hash, 64 hex-символа |
+| `-password` | пусто | Пароль; клиент хеширует Argon2id |
+| `-anon` | `false` | Анонимный Handshake (пустой login, нулевой hash) |
 
 `Dial` уже ждёт активации (таймаут — `ConnectTimeout` в конфиге). После успешного dial CLI печатает справочник и показывает `>`. Если сервер рвёт соединение, процесс выходит с `disconnected: ...`.
 

@@ -10,14 +10,15 @@ Interactive client in `cmd/`. Useful for manual checks against a local or remote
 go run ./cmd \
   -addr 127.0.0.1:16000 \
   -login user \
-  -hash 0000000000000000000000000000000000000000000000000000000000000000
+  -password secret
 ```
 
 | Flag | Default | Meaning |
 | --- | --- | --- |
 | `-addr` | `127.0.0.1:16000` | `host:port` |
 | `-login` | `user` | Handshake login |
-| `-hash` | 32 zero bytes | Auth hash as 64 hex characters |
+| `-password` | empty | Password; client hashes it with Argon2id |
+| `-anon` | `false` | Anonymous handshake (empty login, zero hash) |
 
 `Dial` already waits for activation (`ConnectTimeout` in the config). After a successful dial the CLI prints the command reference and shows a `>` prompt. If the server drops the connection, the process exits with `disconnected: ...`.
 

@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"context"
-	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
@@ -21,19 +20,15 @@ import (
 func main() {
 	addr := flag.String("addr", "127.0.0.1:16000", "server host:port")
 	login := flag.String("login", "user", "handshake login")
-	hashHex := flag.String("hash", "", "auth hash as 64 hex chars (default: 32 zero bytes)")
+	password := flag.String("password", "", "handshake password (Argon2id-hashed before send)")
+	anon := flag.Bool("anon", false, "anonymous handshake (empty login, zero hash)")
 	flag.Parse()
-
-	hash, err := parseHash(*hashHex)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "hash: %v\n", err)
-		os.Exit(2)
-	}
 
 	cfg := configs.DefaultConnectionConfig()
 	cfg.Auth = configs.AuthConfig{
-		Login: *login,
-		Hash:  hash,
+		Login:     *login,
+		Password:  *password,
+		UseAnonim: *anon,
 	}
 
 	log := implemented.NewText(slog.LevelDebug)
@@ -256,20 +251,4 @@ func formatValue(val values.Value) string {
 	default:
 		return fmt.Sprintf("%T=%v", val, val)
 	}
-}
-
-func parseHash(s string) ([32]byte, error) {
-	var out [32]byte
-	if s == "" {
-		return out, nil
-	}
-	raw, err := hex.DecodeString(s)
-	if err != nil {
-		return out, err
-	}
-	if len(raw) != 32 {
-		return out, fmt.Errorf("want 32 bytes, got %d", len(raw))
-	}
-	copy(out[:], raw)
-	return out, nil
 }

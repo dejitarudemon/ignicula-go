@@ -2,7 +2,7 @@ Language: [Русский](tutorial.md) · [English](tutorial.en.md)
 
 # Туториалы
 
-Работа с [`client.Ignicula`](https://pkg.go.dev/github.com/dejitarudemon/ignicula-go/client#Ignicula). Подставьте свои `addr`, `Login` и `Hash`.
+Работа с [`client.Ignicula`](https://pkg.go.dev/github.com/dejitarudemon/ignicula-go/client#Ignicula). Подставьте свои `addr`, `Login` и `Password`.
 
 ## Гарантии
 
@@ -12,14 +12,14 @@ Language: [Русский](tutorial.md) · [English](tutorial.en.md)
 - **Каждая операция дожидается ответа** сервера (или ошибки / таймаута попытки). Успешный возврат из `Write` / `Delete` значит, что сервер прислал успешный Answer.
 - **Transient-ошибки** (`RequestsConflict`, `InternalError`) клиент повторяет сам, до `RuntimeV1.MaxAttempts` (по умолчанию 3) с backoff.
 - **Обрыв соединения** завершает висящие операции ошибкой; следующие вызовы тоже падают. Следить за `Done` не обязательно.
-- **`Close` идемпотентен** и не путается с peer-disconnect в логах: штатное закрытие не выглядит как FATAL reader error.
+- **`Close` идемпотентен**.
 
 Чего клиент не обещает:
 
-- **Ровно-один раз на wire при ретраях** — повторная отправка возможна; идемпотентность на стороне сервера/ключа — ваша зона ответственности, если это важно.
-- **Глобальный порядок между горутинами** — параллельные вызовы с одного `Ignicula` допустимы, но порядок доставки/применения на сервере между ними не фиксируется.
-- **Сохранность данных без ответа** — если `ctx` отменён или сокет умер до Answer, исход на сервере неизвестен; перечитайте или спроектируйте идемпотентную запись.
-- **Автоматический reconnect** — после `Done` нужен новый `Dial`.
+- **Ровно-один раз на wire при ретраях** — при повторе запрос может уйти повторно; если нужна идемпотентность, её обычно обеспечивают на сервере или выборе ключа.
+- **Глобальный порядок между горутинами** — параллельные вызовы с одного `Ignicula` допустимы, но порядок доставки и применения на сервере между ними не гарантирован.
+- **Сохранность данных без ответа** — если `ctx` отменён или сокет оборвался до Answer, исход на сервере может быть неизвестен; при необходимости стоит перечитать значение.
+- **Автоматический reconnect** — после `Done` соединение не восстанавливается само; достаточно снова вызвать `Dial`.
 
 Таймауты по умолчанию: `ConnectTimeout` 30s (весь `Dial`), CRUD 30s на попытку, Ping 5s, socket read/write 100s.
 
@@ -29,7 +29,7 @@ Language: [Русский](tutorial.md) · [English](tutorial.en.md)
 
 ```go
 cfg := configs.DefaultConnectionConfig()
-cfg.Auth = configs.AuthConfig{Login: "user", Hash: [32]byte{ /* … */ }}
+cfg.Auth = configs.AuthConfig{Login: "user", Password: "secret"}
 
 ignicula, err := client.Dial("127.0.0.1:16000", cfg, nil)
 if err != nil {
@@ -49,9 +49,9 @@ if err := ignicula.Ping(ctx); err != nil {
 ## 3. Write / Read
 
 ```go
-_ = ignicula.Write(ctx, []byte("name"), values.StringValue("alice"))
-_ = ignicula.Write(ctx, []byte("n"), values.Int64Value(-42))
-_ = ignicula.Write(ctx, []byte("j"), values.JSONValue(`{"ok":true}`))
+if err := ignicula.Write(ctx, []byte("name"), values.StringValue("alice")); err != nil {
+	log.Fatal(err)
+}
 
 val, err := ignicula.Read(ctx, []byte("name"))
 if err != nil {
@@ -63,17 +63,29 @@ fmt.Println(val)
 ## 4. Массивы
 
 ```go
-tags, _ := values.NewTypedArray(values.String, values.StringValue("a"), values.StringValue("b"))
-_ = ignicula.Write(ctx, []byte("tags"), tags)
+tags, err := values.NewTypedArray(values.String, values.StringValue("a"), values.StringValue("b"))
+if err != nil {
+	log.Fatal(err)
+}
+if err := ignicula.Write(ctx, []byte("tags"), tags); err != nil {
+	log.Fatal(err)
+}
 
-mix, _ := values.NewUntypedArray(values.StringValue("hello"), values.Int64Value(-7))
-_ = ignicula.Write(ctx, []byte("mix"), mix)
+mix, err := values.NewUntypedArray(values.StringValue("hello"), values.Int64Value(-7))
+if err != nil {
+	log.Fatal(err)
+}
+if err := ignicula.Write(ctx, []byte("mix"), mix); err != nil {
+	log.Fatal(err)
+}
 ```
 
 ## 5. Delete
 
 ```go
-_ = ignicula.Delete(ctx, []byte("name"))
+if err := ignicula.Delete(ctx, []byte("name")); err != nil {
+	log.Fatal(err)
+}
 ```
 
 ## 6. Done и Err (по желанию)

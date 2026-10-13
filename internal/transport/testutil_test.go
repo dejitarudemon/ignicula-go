@@ -37,8 +37,8 @@ func testConnConfig() configs.ConnectionConfig {
 			PingTimeout:     time.Second,
 		},
 		Auth: configs.AuthConfig{
-			Login: "user",
-			Hash:  [32]byte{1, 2, 3},
+			Login:    "user",
+			Password: "secret",
 		},
 	}
 }

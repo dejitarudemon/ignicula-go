@@ -27,7 +27,7 @@ type ConnectionConfig struct {
 // DefaultConnectionConfig returns connection settings with a 30s connect
 // timeout (TCP + Hello + activation), 100s read/write deadlines (server
 // idle-ping window), MustSupport version 1, and [DefaultRunnerV1Config].
-// Auth is left empty and must be set by the caller before connecting.
+// Auth is left empty; set Login/Password (or UseAnonim) before connecting.
 func DefaultConnectionConfig() ConnectionConfig {
 	return ConnectionConfig{
 		ConnectTimeout: defaultConnectTimeout,
