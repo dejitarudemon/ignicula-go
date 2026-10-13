@@ -1,11 +1,13 @@
 package transport
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"slices"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/dejitarudemon/ignicula-go/configs"
 	runner_v1 "github.com/dejitarudemon/ignicula-go/internal/runners/v1"
@@ -49,7 +51,7 @@ type Connection struct {
 	runner_v1 *runner_v1.Runner
 }
 
-func NewConnection(addr string, cfg configs.ConnectionConfig, logger logger.Logger) (*Connection, error) {
+func NewConnection(ctx context.Context, addr string, cfg configs.ConnectionConfig, logger logger.Logger) (*Connection, error) {
 	for _, version := range cfg.MustSupport {
 		if !slices.Contains(supportedVersions, version) {
 			return nil, fmt.Errorf("transport doesn't support %v version", version)
@@ -68,11 +70,13 @@ func NewConnection(addr string, cfg configs.ConnectionConfig, logger logger.Logg
 		return nil, err
 	}
 
-	dialTimeout := cfg.ConnectTimeout
-	if dialTimeout <= 0 {
-		dialTimeout = configs.DefaultConnectionConfig().ConnectTimeout
+	timeout := cfg.ConnectTimeout
+
+	if deadline, ok := ctx.Deadline(); ok {
+		timeout = deadline.Sub(time.Now())
 	}
-	c, err := net.DialTimeout(NET, addr, dialTimeout)
+
+	c, err := net.DialTimeout(NET, addr, timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +96,12 @@ func NewConnection(addr string, cfg configs.ConnectionConfig, logger logger.Logg
 		auth:       cfg.Auth,
 	}
 
-	if err := conn.hello(cfg.ConnectTimeout); err != nil {
+	timeout = cfg.ConnectTimeout
+	if deadline, ok := ctx.Deadline(); ok {
+		timeout = deadline.Sub(time.Now())
+	}
+
+	if err := conn.hello(timeout); err != nil {
 		conn.error("connect to Ignicula server fail", "addr", addr, "error", err)
 
 		_ = c.Close()

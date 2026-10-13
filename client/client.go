@@ -42,7 +42,7 @@ func Dial(addr string, cfg configs.ConnectionConfig, log logger.Logger) (*Ignicu
 	ctxConnect, cancelConnect := context.WithTimeout(context.Background(), cfg.ConnectTimeout)
 	defer cancelConnect()
 
-	conn, err := transport.NewConnection(addr, cfg, log)
+	conn, err := transport.NewConnection(ctxConnect, addr, cfg, log)
 	if err != nil {
 		return nil, err
 	}
