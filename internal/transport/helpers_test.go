@@ -1,9 +1,28 @@
 package transport
 
 import (
+	"errors"
+	"io"
+	"net"
 	"testing"
 	"time"
 )
+
+func TestIsClosedConn(t *testing.T) {
+	if !isClosedConn(net.ErrClosed) {
+		t.Fatal("net.ErrClosed")
+	}
+	if !isClosedConn(io.EOF) {
+		t.Fatal("io.EOF")
+	}
+	if !isClosedConn(errors.Join(io.EOF, errors.New("wrap"))) {
+		t.Fatal("wrapped EOF")
+	}
+	if isClosedConn(errors.New("other")) {
+		t.Fatal("other error")
+	}
+}
+
 
 func TestDeadline(t *testing.T) {
 	before := time.Now()

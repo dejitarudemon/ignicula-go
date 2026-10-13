@@ -61,6 +61,70 @@ func TestStart_OK(t *testing.T) {
 	if err := conn.Close(); err != nil {
 		t.Fatalf("Close = %v", err)
 	}
+
+	select {
+	case <-conn.Done():
+	default:
+		t.Fatal("Done not closed after Close")
+	}
+	if err := conn.Err(); !errors.Is(err, ErrClosed) {
+		t.Fatalf("Err = %v, want ErrClosed", err)
+	}
+
+	log.mu.Lock()
+	defer log.mu.Unlock()
+	for _, call := range log.err {
+		if call.msg == "reader stopped" {
+			t.Fatalf("Close logged unexpected error: %q %v", call.msg, call.args)
+		}
+	}
+}
+
+func TestPeerDisconnect_AbortsPending(t *testing.T) {
+	conn, peer, br, cleanup := dialOK(t, nil)
+	defer cleanup()
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		grantHandshake(t, peer, br)
+	}()
+	if err := conn.Start(context.Background()); err != nil {
+		t.Fatalf("Start = %v", err)
+	}
+	wg.Wait()
+
+	pingDone := make(chan error, 1)
+	go func() {
+		pingDone <- conn.Ping(context.Background())
+	}()
+
+	// Give ping a moment to register, then peer drops the TCP connection.
+	time.Sleep(20 * time.Millisecond)
+	_ = peer.Close()
+
+	select {
+	case <-conn.Done():
+	case <-time.After(2 * time.Second):
+		t.Fatal("Done not closed after peer disconnect")
+	}
+	if err := conn.Err(); !errors.Is(err, ErrDisconnected) {
+		t.Fatalf("Err = %v, want ErrDisconnected", err)
+	}
+
+	select {
+	case err := <-pingDone:
+		if err == nil {
+			t.Fatal("Ping = nil after disconnect")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Ping still blocked after peer disconnect")
+	}
+
+	if err := conn.Ping(context.Background()); !errors.Is(err, ErrDisconnected) {
+		t.Fatalf("Ping after Done = %v, want ErrDisconnected", err)
+	}
 }
 
 func TestStart_AlreadyStarted(t *testing.T) {

@@ -2,8 +2,10 @@ package transport
 
 // Close shuts down workers, the v1 runner, and the underlying connection, then
 // waits until reader and writer have exited (if Start was called). It is safe
-// to call more than once.
+// to call more than once. [Connection.Done] is closed; [Connection.Err] is
+// [ErrClosed] unless a prior disconnect/failure was already recorded.
 func (c *Connection) Close() error {
+	c.markDone(nil)
 	return c.shutdown(true)
 }
 

@@ -36,11 +36,17 @@ func (c *Connection) reader(ctx context.Context) error {
 		}
 
 		if err := c.inner.SetDeadline(deadline(c.timeouts.Read)); err != nil {
+			if c.shuttingDown() {
+				return nil
+			}
 			return err
 		}
 
 		version, err := c.decoder.DecodePreamble(reader)
 		if err != nil {
+			if c.shuttingDown() {
+				return nil
+			}
 			return err
 		}
 
@@ -50,6 +56,9 @@ func (c *Connection) reader(ctx context.Context) error {
 				if _, ok := errors.AsType[runners.LogAndIgnore](err); ok {
 					c.warn("ignored frame", "error", err)
 					continue
+				}
+				if c.shuttingDown() {
+					return nil
 				}
 				return err
 			}
@@ -93,14 +102,18 @@ func (c *Connection) writer(ctx context.Context) {
 		}
 
 		if err := c.inner.SetDeadline(deadline(c.timeouts.Write)); err != nil {
-			c.error("failed to set write deadline", "error", err)
-			c.closeConn()
+			if !c.shuttingDown() {
+				c.error("failed to set write deadline", "error", err)
+				c.abort(fmt.Errorf("%w: %v", ErrDisconnected, err))
+			}
 			return
 		}
 
 		if _, err := batch.WriteTo(c.inner); err != nil {
-			c.error("failed to request", "error", err)
-			c.closeConn()
+			if !c.shuttingDown() {
+				c.error("failed to request", "error", err)
+				c.abort(fmt.Errorf("%w: %v", ErrDisconnected, err))
+			}
 			return
 		}
 		batch = batch[:0]
