@@ -35,6 +35,10 @@ type Connection struct {
 	closeOnce sync.Once
 	started   atomic.Bool
 
+	done     chan struct{}
+	doneOnce sync.Once
+	fatal    atomic.Value // error; set when Done closes due to failure
+
 	readerDone chan struct{}
 	writerDone chan struct{}
 
@@ -75,6 +79,7 @@ func NewConnection(addr string, cfg configs.ConnectionConfig, logger logger.Logg
 		versions:   cfg.MustSupport,
 		timeouts:   Timeouts{Read: cfg.ReadTimeout, Write: cfg.WriteTimeout},
 		close:      make(chan struct{}),
+		done:       make(chan struct{}),
 		readerDone: make(chan struct{}),
 		writerDone: make(chan struct{}),
 		requests:   requests,
